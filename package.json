@@ -1,0 +1,9 @@
+{
+  "name": "aura-screen",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "cd frontend && vite",
+    "build": "cd frontend && npm install && npm run build"
+  }
+}
