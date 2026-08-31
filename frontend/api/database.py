@@ -1,9 +1,12 @@
 import os
 from datetime import datetime
 from pymongo import MongoClient
-from dotenv import load_dotenv
 
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
 DB_NAME = os.getenv("MONGO_DB_NAME", "Aura-Screen")

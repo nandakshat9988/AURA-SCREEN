@@ -2,9 +2,11 @@ import os
 import json
 import anthropic
 
-from dotenv import load_dotenv
-
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 CLAUDE_MODEL = "claude-3-opus-20240229"
 
