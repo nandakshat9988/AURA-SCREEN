@@ -5,12 +5,20 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+if PARENT_DIR not in sys.path:
+    sys.path.insert(0, PARENT_DIR)
+
 from http.server import BaseHTTPRequestHandler
 import json
 import uuid
-import database
-import rag
-import llm
+
+try:
+    import database
+    import rag
+    import llm
+except ImportError:
+    from api import database, rag, llm
 
 MAX_INTERVIEW_TURNS = 3
 
