@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import anthropic
 
 try:
@@ -193,6 +194,11 @@ Candidate's Answer:
 {candidate_answer}
 
 Evaluate technical accuracy, conceptual depth, and trade-off awareness on a scale of 0-100.
+Be extremely strict and rigorous:
+- One-word answers (e.g. 'yes', 'no', 'ok') or answers with no technical reasoning MUST receive a score between 0 and 10.
+- Short or generic answers without clear domain keywords and architectural trade-offs must receive less than 40.
+- Only comprehensive answers with correct technical terminology and trade-offs deserve 75+.
+
 Output MUST be pure JSON with keys:
 "score": (integer 0-100),
 "strengths": (list of 2 short strings),
@@ -210,28 +216,55 @@ Output MUST be pure JSON with keys:
         except Exception:
             pass
 
-    length = len(candidate_answer.strip().split())
-    if length < 10:
+    tokens = re.findall(r"\b[a-z0-9_]{2,}\b", candidate_answer.lower())
+    words = candidate_answer.strip().split()
+    word_count = len(words)
+
+    if word_count < 4 or candidate_answer.strip().lower() in ["yes", "no", "ok", "okay", "yeah", "nope", "idk", "i don't know", "none"]:
         return {
-            "score": 45,
-            "strengths": ["Direct response provided"],
-            "improvements": ["Answer lacks theoretical depth and concrete technical terminology"],
-            "feedback": "The response touches upon the topic but needs deeper technical rigor, specific formula or architectural citations, and discussion of practical trade-offs."
+            "score": 5,
+            "strengths": ["Answer recorded"],
+            "improvements": ["Answer is completely superficial and lacks technical reasoning or explanation"],
+            "feedback": "A one-word or trivial response fails to demonstrate understanding of the question or technical domain. Elaborate with formulas, algorithms, or architectural trade-offs."
         }
-    elif length < 35:
+
+    grounded_tokens = set(re.findall(r"\b[a-z0-9_]{3,}\b", context_text.lower()))
+    question_tokens = set(re.findall(r"\b[a-z0-9_]{3,}\b", question.lower()))
+    target_vocab = grounded_tokens.union(question_tokens)
+
+    matched_keywords = [t for t in tokens if t in target_vocab and len(t) > 3]
+    unique_matches = len(set(matched_keywords))
+
+    if word_count < 15 or unique_matches < 2:
+        return {
+            "score": 20,
+            "strengths": ["Attempted response"],
+            "improvements": ["Incorporate core principles, terminology, and concrete mechanisms from the textbook"],
+            "feedback": "The response is overly brief and lacks grounding in the fundamental concepts asked. It misses key terminology and causal reasoning."
+        }
+
+    if word_count < 35 or unique_matches < 4:
+        return {
+            "score": 50,
+            "strengths": ["Basic conceptual alignment", "Identified general context"],
+            "improvements": ["Address edge cases, trade-offs, and underlying mathematical or architectural mechanics"],
+            "feedback": "Fair introductory explanation, but needs deeper analysis of performance characteristics, theoretical constraints, or trade-offs to reach hire standards."
+        }
+
+    if unique_matches < 7:
         return {
             "score": 75,
-            "strengths": ["Clear fundamental understanding", "Accurate core concept identification"],
-            "improvements": ["Elaborate on edge cases and failure modes"],
-            "feedback": "Solid answer addressing the primary requirement. Bringing in architectural constraints or mathematical context would elevate this to senior-level mastery."
+            "strengths": ["Solid conceptual grasp", "Accurate technical terminology"],
+            "improvements": ["Deepen production telemetry and operational failure modes"],
+            "feedback": "Good comprehensive answer that covers the core subject matter well. Bringing in nuanced architectural trade-offs elevates it to senior level."
         }
-    else:
-        return {
-            "score": 90,
-            "strengths": ["Comprehensive conceptual articulation", "Strong domain vocabulary", "Solid understanding of trade-offs"],
-            "improvements": ["Include production monitoring or operational telemetry considerations"],
-            "feedback": "Excellent, well-structured explanation demonstrating deep command of the concepts and their practical implications."
-        }
+
+    return {
+        "score": 92,
+        "strengths": ["Comprehensive domain depth", "Precise terminology", "Rigorous discussion of trade-offs"],
+        "improvements": ["Consider real-time distributed edge scenarios"],
+        "feedback": "Exceptional response demonstrating rigorous theoretical and practical mastery of the concepts."
+    }
 
 def generate_final_report(candidate_info: dict, role: str, turns: list) -> dict:
     scores = [turn.get("feedback", {}).get("score", 70) for turn in turns]
